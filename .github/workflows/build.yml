@@ -34,11 +34,9 @@ jobs:
             ~/Arduino/libraries
           key: arduino-esp32-${{ hashFiles('.github/workflows/build.yml') }}
 
-      # ── 3. Install arduino-cli ────────────────────────────────────────────
+      # ── 3. Install arduino-cli (official action handles PATH automatically) ──
       - name: Install arduino-cli
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
-          echo "$HOME/bin" >> $GITHUB_PATH
+        uses: arduino/setup-arduino-cli@v2
 
       # ── 4. Configure board manager URL (always, even on cache hit) ────────
       - name: Configure arduino-cli
