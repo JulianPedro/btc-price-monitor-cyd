@@ -1,0 +1,8 @@
+# Arduino build artifacts
+build/
+*.elf
+*.map
+
+# CI-generated files (built and deployed by GitHub Actions — do not commit)
+docs/firmware/
+docs/version.json

@@ -1,0 +1,118 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; cancel in-progress if a new push arrives
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Cache arduino-cli packages & libraries ─────────────────────────
+      - name: Cache arduino-cli dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15
+            ~/Arduino/libraries
+          key: arduino-esp32-${{ hashFiles('.github/workflows/build.yml') }}
+
+      # ── 3. Install arduino-cli ────────────────────────────────────────────
+      - name: Install arduino-cli
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh | sh
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      # ── 4. Configure board manager URL (always, even on cache hit) ────────
+      - name: Configure arduino-cli
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config set board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
+
+      # ── 5. Install ESP32 core and libraries (skipped on cache hit) ────────
+      - name: Install ESP32 core and libraries
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "TFT_eSPI"
+          arduino-cli lib install "XPT2046_Touchscreen"
+          arduino-cli lib install "ArduinoJson"
+          arduino-cli lib install "WiFiManager"
+
+      # ── 6. Patch TFT_eSPI with the CYD-specific User_Setup.h ─────────────
+      - name: Configure TFT_eSPI for CYD
+        run: cp User_Setup.h ~/Arduino/libraries/TFT_eSPI/User_Setup.h
+
+      # ── 7. Compile ────────────────────────────────────────────────────────
+      # arduino-cli requires the sketch folder name to match the .ino filename,
+      # so we copy the source files to a correctly named temp directory.
+      - name: Compile firmware
+        run: |
+          mkdir -p /tmp/ycd-btc
+          cp ycd-btc.ino config.h /tmp/ycd-btc/
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --export-binaries \
+            /tmp/ycd-btc
+
+      # ── 8. Collect firmware binaries ──────────────────────────────────────
+      - name: Prepare docs/firmware
+        run: |
+          mkdir -p docs/firmware
+          BUILD=/tmp/ycd-btc/build/esp32.esp32.esp32
+          cp "${BUILD}/ycd-btc.ino.bin"            docs/firmware/firmware.bin
+          cp "${BUILD}/ycd-btc.ino.bootloader.bin" docs/firmware/bootloader.bin
+          cp "${BUILD}/ycd-btc.ino.partitions.bin" docs/firmware/partitions.bin
+          # boot_app0.bin ships with the ESP32 core
+          find ~/.arduino15/packages/esp32 -name "boot_app0.bin" | head -1 \
+            | xargs -I{} cp {} docs/firmware/boot_app0.bin
+
+      # ── 9. Write build metadata shown on the landing page ─────────────────
+      - name: Generate version.json
+        run: |
+          printf '{"sha":"%s","date":"%s","ref":"%s"}\n' \
+            "${{ github.sha }}" \
+            "$(date -u +%Y-%m-%d)" \
+            "${{ github.ref_name }}" \
+            > docs/version.json
+
+      # ── 10. Configure GitHub Pages ────────────────────────────────────────
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # ── 11. Upload docs/ as the Pages artifact ────────────────────────────
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

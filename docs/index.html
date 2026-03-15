@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BTC Price Monitor — ESP32 CYD Installer</title>
+  <meta name="description" content="Flash the BTC Price Monitor firmware to your ESP32-2432S028 (Cheap Yellow Display) directly from your browser." />
+  <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --btc:          #f7931a;
+      --btc-dark:     #e07d0a;
+      --btc-glow:     rgba(247, 147, 26, 0.35);
+      --bg:           #07080f;
+      --card:         rgba(11, 13, 22, 0.72);
+      --card-border:  rgba(247, 147, 26, 0.16);
+      --divider:      rgba(255, 255, 255, 0.06);
+      --text:         #edf0fa;
+      --muted:        #6b7294;
+      --feature-bg:   rgba(247, 147, 26, 0.045);
+      --feature-border: rgba(247, 147, 26, 0.11);
+      --green:        #22c55e;
+      --red:          #ef4444;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ────────────────────────────────────────────────
+       ANIMATED BACKGROUND
+    ──────────────────────────────────────────────── */
+    .bg {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* subtle dot grid */
+    .bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(247,147,26,0.18) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 40%, transparent 100%);
+    }
+
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.11;
+      will-change: transform;
+    }
+    .blob-1 {
+      width: 750px; height: 750px;
+      background: radial-gradient(circle, #f7931a 0%, transparent 65%);
+      top: -280px; right: -180px;
+      animation: drift-a 30s ease-in-out infinite;
+    }
+    .blob-2 {
+      width: 650px; height: 650px;
+      background: radial-gradient(circle, #4f46e5 0%, transparent 65%);
+      bottom: -220px; left: -180px;
+      animation: drift-b 38s ease-in-out infinite;
+    }
+    .blob-3 {
+      width: 450px; height: 450px;
+      background: radial-gradient(circle, #0ea5e9 0%, transparent 65%);
+      top: 45%; left: 48%;
+      transform: translate(-50%, -50%);
+      animation: drift-c 24s ease-in-out infinite;
+    }
+
+    @keyframes drift-a {
+      0%,100% { transform: translate(0,0) scale(1); }
+      40%      { transform: translate(-90px, 110px) scale(1.08); }
+      70%      { transform: translate(60px, -70px) scale(0.95); }
+    }
+    @keyframes drift-b {
+      0%,100% { transform: translate(0,0) scale(1); }
+      35%      { transform: translate(100px, -90px) scale(1.1); }
+      65%      { transform: translate(-50px, 80px) scale(0.92); }
+    }
+    @keyframes drift-c {
+      0%,100% { transform: translate(-50%,-50%) scale(1); }
+      50%      { transform: translate(-42%,-58%) scale(1.18); }
+    }
+
+    /* ────────────────────────────────────────────────
+       PAGE LAYOUT
+    ──────────────────────────────────────────────── */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 20px;
+      gap: 28px;
+    }
+
+    /* ────────────────────────────────────────────────
+       CARD
+    ──────────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      max-width: 500px;
+      background: var(--card);
+      backdrop-filter: blur(36px);
+      -webkit-backdrop-filter: blur(36px);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.025),
+        0 48px 96px rgba(0,0,0,0.65),
+        0 0 160px rgba(247,147,26,0.045);
+      overflow: hidden;
+    }
+
+    /* ────────────────────────────────────────────────
+       HERO
+    ──────────────────────────────────────────────── */
+    .hero {
+      padding: 44px 40px 32px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(247,147,26,0.07) 0%, transparent 100%);
+      border-bottom: 1px solid var(--divider);
+    }
+
+    /* Bitcoin logo */
+    .btc-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 26px;
+    }
+    .btc-ring {
+      position: absolute;
+      inset: -16px;
+      border-radius: 50%;
+      background: transparent;
+      border: 1.5px solid rgba(247,147,26,0.25);
+      animation: ring-pulse 3.2s ease-in-out infinite;
+    }
+    .btc-ring-2 {
+      position: absolute;
+      inset: -28px;
+      border-radius: 50%;
+      background: transparent;
+      border: 1px solid rgba(247,147,26,0.1);
+      animation: ring-pulse 3.2s ease-in-out 0.6s infinite;
+    }
+    .btc-glow-bg {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(247,147,26,0.45) 0%, transparent 70%);
+      animation: glow-pulse 3.2s ease-in-out infinite;
+    }
+    @keyframes ring-pulse {
+      0%,100% { transform: scale(1);    opacity: 0.7; }
+      50%      { transform: scale(1.12); opacity: 0.3; }
+    }
+    @keyframes glow-pulse {
+      0%,100% { transform: scale(1);   opacity: 0.5; }
+      50%      { transform: scale(1.3); opacity: 0.9; }
+    }
+
+    .btc-coin {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #ffb347 0%, #f7931a 45%, #d4770a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 0 0 3px rgba(247,147,26,0.2),
+        0 12px 40px rgba(247,147,26,0.5),
+        inset 0 2px 4px rgba(255,255,255,0.25);
+      animation: coin-float 3.2s ease-in-out infinite;
+    }
+    @keyframes coin-float {
+      0%,100% { transform: translateY(0)   scale(1); }
+      50%      { transform: translateY(-5px) scale(1.03); }
+    }
+    .btc-symbol {
+      font-size: 38px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      letter-spacing: -1px;
+    }
+
+    /* Title */
+    .hero h1 {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -0.6px;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .hero h1 .accent {
+      background: linear-gradient(135deg, #f7931a 30%, #ffcc70 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.65;
+      max-width: 360px;
+      margin: 0 auto 22px;
+    }
+
+    /* Badges */
+    .badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    .badge-chip {
+      background: rgba(247,147,26,0.1);
+      border: 1px solid rgba(247,147,26,0.28);
+      color: #ffb347;
+    }
+    .badge-oss {
+      background: rgba(34,197,94,0.08);
+      border: 1px solid rgba(34,197,94,0.22);
+      color: #4ade80;
+    }
+    .badge-arduino {
+      background: rgba(0,130,153,0.1);
+      border: 1px solid rgba(0,130,153,0.25);
+      color: #22d3ee;
+    }
+
+    /* ────────────────────────────────────────────────
+       FEATURES
+    ──────────────────────────────────────────────── */
+    .features {
+      padding: 26px 40px;
+      border-bottom: 1px solid var(--divider);
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 14px;
+      background: var(--feature-bg);
+      border: 1px solid var(--feature-border);
+      border-radius: 14px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .feature:hover {
+      background: rgba(247,147,26,0.08);
+      border-color: rgba(247,147,26,0.22);
+    }
+    .feat-icon {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: rgba(247,147,26,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feat-icon svg {
+      width: 17px;
+      height: 17px;
+      color: var(--btc);
+    }
+    .feat-text strong {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .feat-text span {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    /* ────────────────────────────────────────────────
+       INSTALL SECTION
+    ──────────────────────────────────────────────── */
+    .install {
+      padding: 30px 40px 36px;
+      text-align: center;
+    }
+
+    /* Steps */
+    .steps {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      max-width: 110px;
+      position: relative;
+    }
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 17px;
+      left: calc(50% + 18px);
+      right: calc(-50% + 18px);
+      height: 1px;
+      background: var(--divider);
+    }
+    .step-num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(247,147,26,0.1);
+      border: 1px solid rgba(247,147,26,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--btc);
+    }
+    .step-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    /* Install button */
+    esp-web-install-button {
+      display: block;
+      margin: 0 auto 16px;
+      max-width: 300px;
+    }
+    .install-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 17px 36px;
+      background: linear-gradient(135deg, #ffb347 0%, #f7931a 45%, #d4770a 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.1px;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow:
+        0 8px 28px rgba(247,147,26,0.4),
+        0 2px 8px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.15);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .install-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+    }
+    .install-btn:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 0 0 4px rgba(247,147,26,0.18),
+        0 14px 36px rgba(247,147,26,0.5),
+        0 2px 8px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.15);
+    }
+    .install-btn:active { transform: translateY(0); }
+    .install-btn svg { width: 20px; height: 20px; position: relative; }
+
+    /* "not supported" fallback */
+    .unsupported {
+      padding: 14px 20px;
+      background: rgba(239,68,68,0.07);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 12px;
+      font-size: 13px;
+      color: #f87171;
+      text-align: center;
+    }
+
+    .install-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .install-note svg { width: 13px; height: 13px; }
+    .note-ok { color: #4ade80; }
+    .note-warn { color: #facc15; }
+
+    /* ────────────────────────────────────────────────
+       VERSION BAR
+    ──────────────────────────────────────────────── */
+    .version-bar {
+      padding: 13px 32px;
+      border-top: 1px solid var(--divider);
+      background: rgba(0,0,0,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+      gap: 12px;
+    }
+    .build-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 7px;
+      vertical-align: middle;
+      animation: dot-blink 2.4s ease-in-out infinite;
+    }
+    @keyframes dot-blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.25; }
+    }
+
+    /* ────────────────────────────────────────────────
+       PAGE FOOTER
+    ──────────────────────────────────────────────── */
+    .page-footer {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .page-footer a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .page-footer a:hover { color: #ffb347; }
+
+    /* ────────────────────────────────────────────────
+       RESPONSIVE
+    ──────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .card { border-radius: 22px; }
+      .hero, .features, .install { padding-left: 22px; padding-right: 22px; }
+      .hero h1 { font-size: 23px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .version-bar { padding: 12px 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Animated background ─────────────────────────────────────────────── -->
+<div class="bg" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+</div>
+
+<div class="page">
+  <div class="card">
+
+    <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+    <div class="hero">
+      <div class="btc-wrap" aria-hidden="true">
+        <div class="btc-ring-2"></div>
+        <div class="btc-ring"></div>
+        <div class="btc-glow-bg"></div>
+        <div class="btc-coin">
+          <span class="btc-symbol">₿</span>
+        </div>
+      </div>
+
+      <h1>BTC Price <span class="accent">Monitor</span></h1>
+      <p>
+        Real-time Bitcoin tracker for the ESP32&#8209;2432S028
+        (Cheap Yellow Display). Live prices, 30-min sparkline,
+        auto-brightness, and Wi-Fi setup — all on a 2.8&Prime; touchscreen.
+      </p>
+
+      <div class="badges">
+        <span class="badge badge-chip">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6M9 12h6M9 15h3"/></svg>
+          ESP32 CYD
+        </span>
+        <span class="badge badge-arduino">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M14 9l3 3-3 3"/></svg>
+          Arduino
+        </span>
+        <span class="badge badge-oss">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+          Open Source
+        </span>
+      </div>
+    </div>
+
+    <!-- ── Features ───────────────────────────────────────────────────────── -->
+    <div class="features">
+      <div class="features-grid">
+
+        <div class="feature">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div class="feat-text">
+            <strong>Live Prices</strong>
+            <span>BTC/USD &amp; local currency, refreshed every 60 s</span>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <div class="feat-text">
+            <strong>30-min Sparkline</strong>
+            <span>Ring-buffer history chart with min/max labels</span>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </div>
+          <div class="feat-text">
+            <strong>Auto-brightness</strong>
+            <span>LDR ambient sensor with EMA smoothing</span>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+              <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+              <line x1="12" y1="20" x2="12.01" y2="20"/>
+            </svg>
+          </div>
+          <div class="feat-text">
+            <strong>Wi-Fi Portal</strong>
+            <span>No hardcoded credentials — configure from your phone</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Install section ───────────────────────────────────────────────── -->
+    <div class="install">
+
+      <!-- Steps -->
+      <div class="steps" aria-label="Installation steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-label">Connect ESP32 via USB</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-label">Click Install below</div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-label">Follow the prompts</div>
+        </div>
+      </div>
+
+      <!-- ESP Web Tools button -->
+      <esp-web-install-button manifest="./manifest.json">
+        <button class="install-btn" slot="activate">
+          <!-- USB icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v8m0 0-3-3m3 3 3-3"/>
+            <rect x="7" y="10" width="10" height="8" rx="2"/>
+            <path d="M8 18v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2"/>
+          </svg>
+          Install Firmware
+        </button>
+        <div class="unsupported" slot="not-supported">
+          ⚠️ Web Serial API not supported.<br>
+          Please use <strong>Chrome</strong> or <strong>Edge</strong> on a desktop computer.
+        </div>
+      </esp-web-install-button>
+
+      <div class="install-note">
+        <svg class="note-ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Works in Chrome &amp; Edge — no software installation required
+        &nbsp;·&nbsp;
+        <svg class="note-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        HTTPS required
+      </div>
+    </div>
+
+    <!-- ── Version bar ───────────────────────────────────────────────────── -->
+    <div class="version-bar">
+      <div>
+        <span class="build-dot"></span>
+        <span id="build-info">latest build</span>
+      </div>
+      <div>MIT License</div>
+    </div>
+
+  </div><!-- /.card -->
+
+  <!-- Page footer -->
+  <div class="page-footer">
+    <a href="https://github.com/JulianPedro/btc-price-monitor-cyd" target="_blank" rel="noopener noreferrer">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      GitHub
+    </a>
+    <span>·</span>
+    <span>ESP32-2432S028 (CYD)</span>
+    <span>·</span>
+    <a href="https://github.com/JulianPedro/btc-price-monitor-cyd/blob/main/README.md" target="_blank" rel="noopener noreferrer">Docs</a>
+  </div>
+
+</div><!-- /.page -->
+
+<script>
+  // Load build metadata injected by CI into version.json
+  fetch('./version.json')
+    .then(r => r.json())
+    .then(v => {
+      const el = document.getElementById('build-info');
+      const sha = v.sha ? v.sha.slice(0, 7) : '';
+      const date = v.date || '';
+      el.textContent = sha && date ? `${sha}  ·  ${date}` : 'latest build';
+    })
+    .catch(() => {/* silently ignore — version.json is generated by CI */});
+</script>
+
+</body>
+</html>
