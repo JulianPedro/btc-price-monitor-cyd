@@ -504,7 +504,6 @@ void ldrUpdate() {
   lastLdrRead = millis();
 
   int raw = analogRead(PIN_LDR);
-  Serial.printf("[LDR] raw=%d\n", raw);   // remove after calibration
 
   if (ldrEma < 0) ldrEma = raw;
   ldrEma += 0.12f * (raw - ldrEma);

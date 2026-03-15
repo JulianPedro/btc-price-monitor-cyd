@@ -2,7 +2,7 @@
 
 A real-time Bitcoin price tracker for the **ESP32-2432S028 (Cheap Yellow Display)** board. Shows BTC/USD, BTC/BRL, a 30-minute sparkline chart, and a live clock — all on the built-in 2.8" touchscreen.
 
-> 📸 _Add a photo of your device here_
+![ESP32 CYD](docs/cyd.jpg)
 
 ---
 
@@ -184,6 +184,16 @@ btc-monitor-cyd/
 ## Contributing
 
 Issues and pull requests are welcome. If you adapt this to a different board or display size, the main constants to update are the `L_*` layout defines at the top of `ycd-btc.ino` and the TFT_eSPI `User_Setup.h`.
+
+---
+
+## Support This Project
+
+If you find this project useful or just want to say thanks, consider sending a tip over the **Bitcoin Lightning Network** ⚡.
+
+```
+⚡ Lightning Address: stripedtailor30@walletofsatoshi.com
+```
 
 ---
 
