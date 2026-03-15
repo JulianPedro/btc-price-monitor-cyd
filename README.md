@@ -6,9 +6,21 @@ A real-time Bitcoin price tracker for the **ESP32-2432S028 (Cheap Yellow Display
 
 ---
 
-## Features
+## 🚀 Install now
 
-- **Live prices** — BTC/USD and USD/BRL fetched every 60 seconds (primary: AwesomeAPI, fallback: Coinbase)
+For a simple install, access the [**Web Installer**](https://julianpedro.github.io/btc-price-monitor-cyd/) and follow the instructions.
+
+**Attention**: For linux users, you will need give permission to access the USB port. You can do this by running the following command:
+
+```sh
+sudo chmod 666 /dev/ttyUSB0
+``` 
+
+---
+
+## ✨ Features
+
+- **Live prices** — BTC/Local Currency and USD/Local Currency fetched every 60 seconds (primary: AwesomeAPI, fallback: Coinbase)
 - **BTC/BRL** — calculated directly from the two rates
 - **30-minute sparkline** — ring-buffer history chart with min/max labels
 - **Price change indicator** — colored ▲/▼ arrow with percentage since last reading
@@ -17,12 +29,12 @@ A real-time Bitcoin price tracker for the **ESP32-2432S028 (Cheap Yellow Display
 - **Timezone & orientation via portal** — same captive portal lets you set UTC offset and portrait/landscape; changes are saved to flash and survive reboots
 - **Re-open portal anytime** — hold the screen for 3 seconds at power-on to reconfigure without reflashing
 - **Auto-brightness** — LDR ambient light sensor with EMA smoothing and gamma curve
-- **RGB LED** — rainbow animation; flashes green on price up, red on price down
+- **RGB LED** — flashes green on price up, red on price down
 - **Double-tap to sleep** — turns display off to save power; double-tap again to wake
 
 ---
 
-## Hardware
+## 🔧 Hardware
 
 | Item | Details |
 |---|---|
@@ -35,7 +47,7 @@ A real-time Bitcoin price tracker for the **ESP32-2432S028 (Cheap Yellow Display
 
 No extra wiring needed — everything is on the CYD board.
 
-### Pin reference
+### 📌 Pin reference
 
 | Function | GPIO |
 |---|---|
@@ -52,7 +64,7 @@ No extra wiring needed — everything is on the CYD board.
 
 ---
 
-## Software dependencies
+## 📦 Software dependencies
 
 Install all four via **Arduino Library Manager** (Sketch → Include Library → Manage Libraries):
 
@@ -65,7 +77,7 @@ Install all four via **Arduino Library Manager** (Sketch → Include Library →
 
 ---
 
-## Setup
+## ⚙️ Setup
 
 ### 1. TFT_eSPI user configuration
 
@@ -103,15 +115,15 @@ Network: BTC-Monitor
 
 On all subsequent boots it reconnects and applies the saved settings.
 
-### Reconfiguring after first boot
+### 🔄 Reconfiguring after first boot
 
-Hold the touchscreen for **3 seconds** during the "Conectando..." splash screen at any power-on. The portal opens again, letting you change Wi-Fi, timezone, or orientation without reflashing.
+Hold the touchscreen for **3 seconds** during the "Connecting..." splash screen at any power-on. The portal opens again, letting you change Wi-Fi, timezone, or orientation without reflashing.
 
 > **Changing orientation** (`0` ↔ `1`) restarts the device automatically and switches between the portrait layout (single-column with large sparkline) and the landscape layout (two-column: prices on the left, sparkline on the right).
 
 ---
 
-## Usage
+## 👆 Usage
 
 | Gesture | Action |
 |---|---|
@@ -119,7 +131,7 @@ Hold the touchscreen for **3 seconds** during the "Conectando..." splash screen 
 | Double tap | Toggle display on / off |
 | Hold 3 s at power-on | Open configuration portal (Wi-Fi / timezone / orientation) |
 
-### Screens
+### 🖥️ Screens
 
 **Screen 1 — Dashboard**
 
@@ -129,15 +141,15 @@ Hold the touchscreen for **3 seconds** during the "Conectando..." splash screen 
 │  Sun, 15 Mar 2026      │
 ├────────────────────────┤
 │      BTC / USD         │
-│    $97,432.00          │
+│    $71,432.00          │
 │    ▲  +1.24%           │
 ├────────────────────────┤
 │      BTC / BRL         │
-│   R$571.834,00         │
+│   R$380.834,00         │
 │  ╱╲___╱╲  ╱╲___        │  ← sparkline 30 min
 ├────────────────────────┤
-│ USD/BRL  R$5,87        │
-│ ● agora          14:32 │
+│ USD/BRL  R$5,33        │
+│ ● now            14:32 │
 └────────────────────────┘
 ```
 
@@ -149,7 +161,7 @@ Large clock with date and a small BTC/USD footer.
 
 ---
 
-## Configuration reference (`config.h`)
+## 🛠️ Configuration reference (`config.h`)
 
 | Constant | Default | Description |
 |---|---|---|
@@ -165,13 +177,13 @@ Large clock with date and a small BTC/USD footer.
 | `LDR_RAW_DARK` | `3800` | ADC reading in darkness (for calibration) |
 | `LDR_RAW_LIGHT` | `300` | ADC reading under bright light (for calibration) |
 
-### LDR calibration tip
+### 💡 LDR calibration tip
 
 Open the Serial Monitor at 115200 baud after flashing. The sketch prints the raw LDR value every 80 ms. Cover the sensor (dark) and note the value → set as `LDR_RAW_DARK`. Shine a light at it → set as `LDR_RAW_LIGHT`.
 
 ---
 
-## Project structure
+## 📂 Project structure
 
 ```
 btc-monitor-cyd/
@@ -181,22 +193,22 @@ btc-monitor-cyd/
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Issues and pull requests are welcome. If you adapt this to a different board or display size, the main constants to update are the `L_*` layout defines at the top of `ycd-btc.ino` and the TFT_eSPI `User_Setup.h`.
 
 ---
 
-## Support This Project
+## Support This Project ⚡
 
-If you find this project useful or just want to say thanks, consider sending a tip over the **Bitcoin Lightning Network** ⚡.
+If you find this project useful or just want to say thanks, consider sending a tip over the **Bitcoin Lightning Network**. Every sat counts!
 
-```
-⚡ Lightning Address: stripedtailor30@walletofsatoshi.com
-```
+| | |
+|---|---|
+| ⚡ **Lightning Address** | `stripedtailor30@walletofsatoshi.com` |
 
 ---
 
-## License
+## 📄 License
 
 MIT — see [LICENSE](LICENSE) for details.
