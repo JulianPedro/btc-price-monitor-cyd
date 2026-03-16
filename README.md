@@ -1,6 +1,6 @@
 # BTC Price Monitor — ESP32 CYD
 
-A real-time Bitcoin price tracker for the **ESP32-2432S028 (Cheap Yellow Display)** board. Shows BTC/USD, BTC/BRL, a 30-minute sparkline chart, and a live clock — all on the built-in 2.8" touchscreen.
+A real-time Bitcoin price tracker for the **ESP32-2432S028 (Cheap Yellow Display)** board. Shows BTC/USD, BTC/Local Currency, a 30-minute sparkline chart, and a live clock — all on the built-in 2.8" touchscreen.
 
 ![ESP32 CYD](docs/cyd.jpg)
 
@@ -21,7 +21,7 @@ sudo chmod 666 /dev/ttyUSB0
 ## ✨ Features
 
 - **Live prices** — BTC/Local Currency and USD/Local Currency fetched every 60 seconds (primary: AwesomeAPI, fallback: Coinbase)
-- **BTC/BRL** — calculated directly from the two rates
+- **BTC/Local Currency** — calculated directly from the two rates
 - **30-minute sparkline** — ring-buffer history chart with min/max labels
 - **Price change indicator** — colored ▲/▼ arrow with percentage since last reading
 - **3 touch-navigable screens** — dashboard · details · clock
@@ -29,7 +29,7 @@ sudo chmod 666 /dev/ttyUSB0
 - **Timezone & orientation via portal** — same captive portal lets you set UTC offset and portrait/landscape; changes are saved to flash and survive reboots
 - **Re-open portal anytime** — hold the screen for 3 seconds at power-on to reconfigure without reflashing
 - **Auto-brightness** — LDR ambient light sensor with EMA smoothing and gamma curve
-- **RGB LED** — flashes green on price up, red on price down
+- **RGB LED** — off by default; breathes green when price goes up, red when price goes down (10 s effect)
 - **Double-tap to sleep** — turns display off to save power; double-tap again to wake
 
 ---
@@ -110,7 +110,7 @@ Network: BTC-Monitor
 
 1. Connect to it from your phone or laptop
 2. A captive portal opens automatically (or navigate to **192.168.4.1**)
-3. Fill in your Wi-Fi network, password, **timezone** (e.g. `-3` for Brasília, `0` for London, `8` for Hong Kong), and **orientation** (`0` = portrait / standing up, `1` = landscape / lying flat)
+3. Fill in your Wi-Fi network, password, **timezone** (e.g. `-3` for Brasília, `0` for London, `8` for Hong Kong), and **orientation** (`0` = portrait / standing up, `1` = landscape / lying flat), and **currency** (e.g. `BRL`, `EUR`, `JPY`)
 4. Submit — the device saves everything to flash and restarts
 
 On all subsequent boots it reconnects and applies the saved settings.
@@ -129,35 +129,88 @@ Hold the touchscreen for **3 seconds** during the "Connecting..." splash screen 
 |---|---|
 | Single tap | Cycle to next screen |
 | Double tap | Toggle display on / off |
-| Hold 3 s at power-on | Open configuration portal (Wi-Fi / timezone / orientation) |
+| Hold 3 s at power-on | Open configuration portal (Wi-Fi / timezone / orientation / currency) |
 
 ### 🖥️ Screens
 
-**Screen 1 — Dashboard**
+**Screen 1 — Dashboard (portrait)**
 
 ```
-┌────────────────────────┐
-│       14:32:07         │
-│  Sun, 15 Mar 2026      │
-├────────────────────────┤
-│      BTC / USD         │
-│    $71,432.00          │
-│    ▲  +1.24%           │
-├────────────────────────┤
-│      BTC / BRL         │
-│   R$380.834,00         │
-│  ╱╲___╱╲  ╱╲___        │  ← sparkline 30 min
-├────────────────────────┤
-│ USD/BRL  R$5,33        │
-│ ● now            14:32 │
-└────────────────────────┘
+┌──────────────────────────┐
+│        14:32:07          │  ← clock (updates every second)
+│    Sun, 15 Mar 2026      │  ← date
+├──────────────────────────┤
+│        BTC / USD         │
+│        $97,432           │
+│        ▲ +1.24%          │  ← green arrow; "--" until second fetch
+├──────────────────────────┤
+│        BTC / BRL         │  ← configured currency (BRL, EUR, JPY…)
+│       R$571,834          │  ← golden
+│ $98k               30m   │
+│  ╱╲___╱╲___╱‾╲___╱╲      │  ← 30-min sparkline with min/max
+│ $94k                     │
+├──────────────────────────┤
+│ ● now            14:32   │  ← Wi-Fi dot · age of data · time
+│          ● ○ ○           │  ← page indicator
+└──────────────────────────┘
+```
+
+**Screen 1 — Dashboard (landscape)**
+
+```
+┌────────────────────────────────────┐
+│            14:32:07                │
+│        Sun, 15 Mar 2026            │
+├──────────────────┬─────────────────┤
+│   BTC / USD      │ $98k       30m  │
+│    $97,432       │  ╱╲___╱‾╲       │
+│   ▲ +1.24%       │          ╱╲___  │
+│ ─────────────    │ $94k            │
+│   BTC / BRL      │                 │
+│   R$571,834      │                 │
+├──────────────────┴─────────────────┤
+│ ● now                      14:32   │
+│               ● ○ ○                │
+└────────────────────────────────────┘
 ```
 
 **Screen 2 — Details**
-All prices, previous reading, percentage change, and last-update timestamp.
+
+```
+┌──────────────────────────┐
+│        BTC / USD         │
+│        $97,432           │
+│        ▲ +1.24%          │  ← "--" until second fetch
+│    prev: $96,238         │
+├──────────────────────────┤
+│        BTC / BRL         │
+│       R$571,834          │
+├──────────────────────────┤
+│    updated: 14:32        │  ← "--:--" until first fetch
+│  ──────────────────────  │
+│         session          │
+│   High   $98,200         │  ← green; shown after 2nd fetch
+│   Low    $94,100         │  ← red
+│   Range  $4,100          │  ← dim
+│ ● now            14:32   │
+│          ○ ● ○           │
+└──────────────────────────┘
+```
 
 **Screen 3 — Clock**
-Large clock with date and a small BTC/USD footer.
+
+```
+┌──────────────────────────┐
+│                          │
+│                          │
+│        14:32:07          │  ← large clock (updates every second)
+│    Sun, 15 Mar 2026      │
+│  ────────────────────    │
+│        $97,432           │  ← BTC/USD in orange
+│                          │
+│          ○ ○ ●           │
+└──────────────────────────┘
+```
 
 ---
 
@@ -172,14 +225,14 @@ Large clock with date and a small BTC/USD footer.
 | `WIFI_PORTAL_TIMEOUT_SEC` | `300` | Seconds before portal closes and device runs offline |
 | `PRICE_REFRESH_MS` | `60000` | Price update interval in milliseconds |
 | `SPARKLINE_POINTS` | `30` | History depth (30 pts × 60 s = 30 min) |
-| `LED_BRIGHTNESS` | `48` | Rainbow LED brightness (0–255) |
+| `LED_BRIGHTNESS` | `48` | Peak brightness of the LED breathing effect (0–255) |
 | `BL_MIN` / `BL_MAX` | `15` / `255` | Backlight PWM range |
 | `LDR_RAW_DARK` | `3800` | ADC reading in darkness (for calibration) |
 | `LDR_RAW_LIGHT` | `300` | ADC reading under bright light (for calibration) |
 
 ### 💡 LDR calibration tip
 
-Open the Serial Monitor at 115200 baud after flashing. The sketch prints the raw LDR value every 80 ms. Cover the sensor (dark) and note the value → set as `LDR_RAW_DARK`. Shine a light at it → set as `LDR_RAW_LIGHT`.
+To calibrate, temporarily add `Serial.printf("[LDR] %d\n", raw);` inside `ldrUpdate()` and open the Serial Monitor at 115200 baud. Cover the sensor completely and note the value → set as `LDR_RAW_DARK`. Shine a light directly at it → set as `LDR_RAW_LIGHT`. Remove the print before the final build.
 
 ---
 

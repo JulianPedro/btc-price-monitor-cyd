@@ -647,7 +647,13 @@ void drawWifiDot(int x, int y, bool ok) {
 // Change indicator ▲/▼ + percentage, centered within [x, x+w)
 void drawChangeIndicator(int x, int y, int w, float cur, float prev) {
   tft.fillRect(x, y, w, 20, TFT_BLACK);
-  if (prev <= 0 || cur <= 0) return;
+  if (prev <= 0 || cur <= 0) {                                                                                                                  
+    tft.setTextColor(C_DIM, TFT_BLACK); tft.setTextSize(1);                                                                                     
+    tft.setTextDatum(MC_DATUM);                                                                                                                 
+    tft.drawString("--", x + w/2, y + 10);                                                                                                      
+    tft.setTextDatum(TC_DATUM);                                                                                                                 
+    return;                                                                                                                                     
+  }
 
   float    pct   = (cur - prev) / prev * 100.0f;
   bool     up    = (pct >= 0);
@@ -795,12 +801,12 @@ bool fetchBTCLocal(float &out) {
 // ═════════════════════════════════════════════════════════════════════════════
 void redrawScreen() {
   drawBorder();
-  drawPageDots();
   switch (curScreen) {
     case 0: (g_orient == 0) ? drawScreen0_portrait() : drawScreen0_landscape(); break;
     case 1: drawScreen1();   break;
     case 2: drawScreen2();   break;
   }
+  drawPageDots();  // always drawn last so screen content never overwrites the dots
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -919,10 +925,54 @@ void drawScreen1() {
       strcpy(buf, "updated: --:--");
     }
     tft.setTextColor(C_DIM, TFT_BLACK); tft.setTextSize(1);
-    tft.drawString(buf, cx, y);
+    tft.drawString(buf, cx, y); y += 14;
   }
 
-  drawStatusBar(L_BORDER+1, H - L_BORDER - 20, W-2*(L_BORDER+1));
+  // Session high / low / range from ring buffer
+  // Use the same statusY constants as screen 0 so the status bar never overlaps the dots
+  int statusY = (g_orient == 0) ? L_STATUS_Y : LL_STATUS_Y;
+  tft.fillRect(L_BORDER+1, y, W-2*(L_BORDER+1), statusY - y, TFT_BLACK);
+  if (histCount >= 2) {
+    float sHigh = priceHist[(histHead - histCount + SPARKLINE_POINTS) % SPARKLINE_POINTS];
+    float sLow  = sHigh;
+    for (int i = 1; i < histCount; i++) {
+      float v = priceHist[(histHead - histCount + i + SPARKLINE_POINTS) % SPARKLINE_POINTS];
+      if (v > sHigh) sHigh = v;
+      if (v < sLow)  sLow  = v;
+    }
+    char buf[32];
+    if (g_orient == 0) {
+      // Portrait — plenty of space, use size 2
+      tft.drawLine(L_BORDER+4, y, W-L_BORDER-5, y, C_DIM); y += 8;
+      tft.setTextColor(C_LABEL, TFT_BLACK); tft.setTextSize(1);
+      tft.drawString("session", cx, y); y += 14;
+      snprintf(buf, sizeof(buf), "High   %s", fmtUSD(sHigh).c_str());
+      tft.setTextColor(TFT_GREEN, TFT_BLACK); tft.setTextSize(2);
+      tft.drawString(buf, cx, y); y += 20;
+      snprintf(buf, sizeof(buf), "Low    %s", fmtUSD(sLow).c_str());
+      tft.setTextColor(TFT_RED, TFT_BLACK);
+      tft.drawString(buf, cx, y); y += 20;
+      snprintf(buf, sizeof(buf), "Range  %s", fmtUSD(sHigh - sLow).c_str());
+      tft.setTextColor(C_DIM, TFT_BLACK);
+      tft.drawString(buf, cx, y);
+    } else {
+      // Landscape — compact, use size 1
+      tft.drawLine(L_BORDER+4, y, W-L_BORDER-5, y, C_DIM); y += 6;
+      tft.setTextColor(C_LABEL, TFT_BLACK); tft.setTextSize(1);
+      tft.drawString("session", cx, y); y += 10;
+      snprintf(buf, sizeof(buf), "High   %s", fmtUSD(sHigh).c_str());
+      tft.setTextColor(TFT_GREEN, TFT_BLACK);
+      tft.drawString(buf, cx, y); y += 11;
+      snprintf(buf, sizeof(buf), "Low    %s", fmtUSD(sLow).c_str());
+      tft.setTextColor(TFT_RED, TFT_BLACK);
+      tft.drawString(buf, cx, y); y += 11;
+      snprintf(buf, sizeof(buf), "Range  %s", fmtUSD(sHigh - sLow).c_str());
+      tft.setTextColor(C_DIM, TFT_BLACK);
+      tft.drawString(buf, cx, y);
+    }
+  }
+
+  drawStatusBar(L_BORDER+1, statusY, W-2*(L_BORDER+1));
   tft.setTextDatum(TL_DATUM);
 }
 
@@ -971,7 +1021,7 @@ void updateClock() {
       break;
 
     case 1:
-      drawStatusBar(L_BORDER+1, H - L_BORDER - 20, W-2*(L_BORDER+1));
+      drawStatusBar(L_BORDER+1, statusY, W-2*(L_BORDER+1));
       break;
 
     case 2: {
