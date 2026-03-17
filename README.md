@@ -125,11 +125,20 @@ Hold the touchscreen for **3 seconds** during the "Connecting..." splash screen 
 
 ## 👆 Usage
 
+### Touch gestures
+
 | Gesture | Action |
 |---|---|
 | Single tap | Cycle to next screen |
 | Double tap | Toggle display on / off |
 | Hold 3 s at power-on | Open configuration portal (Wi-Fi / timezone / orientation / currency) |
+
+### BOOT button (back of board)
+
+| Press | Action |
+|---|---|
+| Short press | Force immediate price refresh |
+| Hold 2 s | Open configuration portal (same as touch hold at power-on) |
 
 ### 🖥️ Screens
 

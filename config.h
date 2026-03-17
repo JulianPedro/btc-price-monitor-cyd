@@ -58,7 +58,7 @@
 //  0 = off, 255 = maximum
 //  LED is off by default; flashes green (price up) or red (price down)
 // ─────────────────────────────────────────────────────────────────────────────
-#define LED_BRIGHTNESS  48
+#define LED_BRIGHTNESS  255
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  BACKLIGHT / LDR  (auto-brightness)

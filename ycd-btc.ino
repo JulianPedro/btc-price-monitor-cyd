@@ -40,6 +40,7 @@ using fs::FS;              // ESP32 core 3.x: WebServer.h uses FS without namesp
 #define PIN_LED_R      4
 #define PIN_LED_G     16
 #define PIN_LED_B     17
+#define PIN_BOOT       0   // BOOT button — active LOW, internal pull-up
 #define TOUCH_CS      33
 #define TOUCH_IRQ     36
 #define TOUCH_SCK     25
@@ -184,6 +185,9 @@ void toggleScreen();
 void touchInit();
 void touchUpdate();
 bool touchGetXY(int16_t &x, int16_t &y);
+void buttonInit();
+void buttonUpdate();
+void openPortal();
 void ldrInit();
 void ldrUpdate();
 void ledInit();
@@ -236,6 +240,7 @@ void setup() {
   drawBorder();
 
   touchInit();
+  buttonInit();
   ldrInit();
 
   setupWifi();
@@ -258,6 +263,7 @@ void setup() {
 void loop() {
   ledUpdate();
   touchUpdate();
+  buttonUpdate();
   ldrUpdate();
 
   if (millis() - lastPriceUpdate >= PRICE_REFRESH_MS) {
@@ -492,6 +498,106 @@ void touchUpdate() {
   }
   tapState = TAP_PENDING; pendingTapAt = now;
   pendingTapX = x; pendingTapY = y;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  BOOT button — short press: force refresh  |  hold 2 s: open portal
+// ═════════════════════════════════════════════════════════════════════════════
+#define BTN_LONG_MS  2000   // hold duration (ms) to trigger portal
+#define BTN_DEBOUNCE   50   // debounce window (ms)
+
+void buttonInit() {
+  pinMode(PIN_BOOT, INPUT_PULLUP);
+}
+
+void buttonUpdate() {
+  static bool     lastRaw    = HIGH;
+  static bool     stableState = HIGH;
+  static uint32_t lastChange = 0;
+  static uint32_t pressedAt  = 0;
+  static bool     longFired  = false;
+
+  bool raw = digitalRead(PIN_BOOT);
+
+  // Debounce
+  if (raw != lastRaw) { lastChange = millis(); lastRaw = raw; return; }
+  if (millis() - lastChange < BTN_DEBOUNCE) return;
+
+  bool prev = stableState;
+  stableState = raw;
+
+  if (prev == HIGH && stableState == LOW) {
+    // Falling edge — button pressed
+    pressedAt = millis();
+    longFired = false;
+  } else if (stableState == LOW && !longFired) {
+    // Held — check for long press threshold
+    if (millis() - pressedAt >= BTN_LONG_MS) {
+      longFired = true;
+      openPortal();
+    }
+  } else if (prev == LOW && stableState == HIGH && !longFired) {
+    // Rising edge — released before long press → short press: force refresh
+    lastPriceUpdate = 0;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  openPortal — opens the WiFiManager config portal from the running app.
+//  Saves changed settings and restarts if anything was modified.
+// ─────────────────────────────────────────────────────────────────────────────
+void openPortal() {
+  int cx = tft.width() / 2;
+  tft.fillScreen(TFT_BLACK);
+  drawBorder();
+  tft.setTextDatum(TC_DATUM);
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK); tft.setTextSize(1);
+  tft.drawString("Settings portal open", cx, L_BORDER + 6);
+  tft.setTextColor(C_DIM, TFT_BLACK);
+  tft.drawString("Connect to BTC-Monitor Wi-Fi", cx, L_BORDER + 18);
+  tft.setTextDatum(TL_DATUM);
+
+  char tz_buf[5], orient_buf[3], cur_buf[5];
+  snprintf(tz_buf,     sizeof(tz_buf),     "%d", (int)g_tz_hours);
+  snprintf(orient_buf, sizeof(orient_buf), "%d", (int)g_orient);
+  g_currency.toCharArray(cur_buf, sizeof(cur_buf));
+
+  WiFiManagerParameter p_tz("tz",
+    "Timezone offset in hours (e.g. -3 for Brasilia, 0 for London, 8 for HKG)",
+    tz_buf, 4);
+  WiFiManagerParameter p_orient("orient",
+    "Orientation: 0 = portrait (upright)   1 = landscape (flat)",
+    orient_buf, 2);
+  WiFiManagerParameter p_cur("cur",
+    "Comparison currency code: BRL EUR GBP JPY ARS CLP MXN CAD AUD",
+    cur_buf, 4);
+
+  WiFiManager wm;
+  wm.addParameter(&p_tz);
+  wm.addParameter(&p_orient);
+  wm.addParameter(&p_cur);
+  wm.setAPCallback(onPortalStart);
+  if (WIFI_PORTAL_TIMEOUT_SEC > 0)
+    wm.setConfigPortalTimeout(WIFI_PORTAL_TIMEOUT_SEC);
+
+  const char* pass = (strlen(WIFI_AP_PASS) > 0) ? WIFI_AP_PASS : nullptr;
+  wm.startConfigPortal(WIFI_AP_NAME, pass);
+
+  int8_t  newTz     = (int8_t) constrain(atoi(p_tz.getValue()), -12, 14);
+  uint8_t newOrient = (uint8_t)constrain(atoi(p_orient.getValue()), 0, 1);
+  String  newCur    = String(p_cur.getValue());
+  newCur.toUpperCase(); newCur.trim();
+  if (newCur.length() != 3) newCur = g_currency;
+
+  if (newTz != g_tz_hours || newOrient != g_orient || newCur != g_currency) {
+    savePrefs(newTz, newOrient, newCur);
+    ESP.restart();
+  }
+
+  // Nothing changed — restore the screen
+  tft.fillScreen(TFT_BLACK);
+  drawBorder();
+  redrawScreen();
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
