@@ -167,7 +167,7 @@
     ──────────────────────────────────────────────── */
     .card {
       width: 100%;
-      max-width: 500px;
+      max-width: 660px;
       background: var(--card);
       backdrop-filter: blur(36px);
       -webkit-backdrop-filter: blur(36px);
@@ -311,7 +311,7 @@
       font-size: 13.5px;
       color: var(--muted);
       line-height: 1.65;
-      max-width: 360px;
+      max-width: 460px;
       margin: 0 auto 22px;
     }
 
@@ -363,7 +363,7 @@
 
     .features-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
     }
 
@@ -626,6 +626,12 @@
     /* ────────────────────────────────────────────────
        RESPONSIVE
     ──────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .features-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
     @media (max-width: 480px) {
       .card {
         border-radius: 22px;
@@ -678,7 +684,7 @@
 
         <h1>BTC Price <span class="accent">Monitor</span></h1>
         <p>
-          Real-time Bitcoin tracker for the ESP32&#8209;2432S028
+          Real-time Bitcoin dashboard for the ESP32&#8209;2432S028 — price, network, halving, fees &amp; Lightning
         </p>
         <div class="badges">
           <span class="badge badge-chip">
@@ -719,7 +725,7 @@
             </div>
             <div class="feat-text">
               <strong>Live Prices</strong>
-              <span>BTC/USD &amp; local currency, refreshed every 60 s</span>
+              <span>BTC/USD &amp; local currency, with a 30-min sparkline</span>
             </div>
           </div>
 
@@ -727,12 +733,44 @@
             <div class="feat-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                <rect x="3" y="3" width="7" height="7" rx="1.4" />
+                <rect x="14" y="3" width="7" height="7" rx="1.4" />
+                <rect x="3" y="14" width="7" height="7" rx="1.4" />
+                <rect x="14" y="14" width="7" height="7" rx="1.4" />
               </svg>
             </div>
             <div class="feat-text">
-              <strong>30-min Sparkline</strong>
-              <span>Ring-buffer history chart with min/max labels</span>
+              <strong>7 Screens</strong>
+              <span>Price, network, halving, fees &amp; Lightning stats</span>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="feat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </div>
+            <div class="feat-text">
+              <strong>RGB LED Events</strong>
+              <span>Reacts to price moves, new blocks &amp; fee spikes</span>
+            </div>
+          </div>
+
+          <div class="feature">
+            <div class="feat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="7" rx="1.4" />
+                <rect x="2" y="14" width="20" height="7" rx="1.4" />
+                <line x1="6" y1="6.5" x2="6.01" y2="6.5" />
+                <line x1="6" y1="17.5" x2="6.01" y2="17.5" />
+              </svg>
+            </div>
+            <div class="feat-text">
+              <strong>Your Own Node</strong>
+              <span>Point the mempool backend at mempool.space or your node</span>
             </div>
           </div>
 
@@ -768,8 +806,8 @@
               </svg>
             </div>
             <div class="feat-text">
-              <strong>Wi-Fi Portal</strong>
-              <span>No hardcoded credentials — configure from your phone</span>
+              <strong>Secure Wi-Fi Portal</strong>
+              <span>Password-protected, opens only when you ask it to</span>
             </div>
           </div>
 
